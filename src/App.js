@@ -4,28 +4,43 @@ import io from "socket.io-client";
 // import Peer from 'peer';
 var Peer = require('peerjs');
 var socket;
+var mainstream;
+var mypeers = [];
+var callPeer;
+var myid;
+
 class App extends Component {
   
   state = {
     register : false,
     whcode:"",
-    placeholder:"Enter wormhole"
+    placeholder:"Enter wormhole",
+    screenShare: "getUserMedia",
+    toggle:""
   }
 
   componentDidMount(){
-        var mypeers = [];
         var room;
-        var myid;
-        socket = io.connect("https://pure-thicket-48071.herokuapp.com/");
+        mainstream=false;
+        socket = io.connect("http://localhost:3300/");
         let urlParams1 = new URLSearchParams(window.location.search);
         let myParam1 = urlParams1.get('roomid');
         socket.on("left",(id)=>{
-            console.log("bropooooooo dead b rrrroooooooo")
-            var deadpeer=mypeers.find(x=>x.peer=id);
+          console.log("bropooooooo dead b rrrroooooooo");
+          mypeers.forEach((x)=>console.log(x));
+          console.log(mypeers,id);
+            console.log("bropooooooo dead b rrrroooooooo");
+            console.log(mypeers);
+            var deadpeer=mypeers.find(x=>x.peer==id);
             console.log(deadpeer);
-            deadpeer.close();
+            console.log("============")
+            console.log(mypeers,id);
+            console.log("============")
+
+            mypeers = mypeers.filter(x => x.peer!=id)
+            console.log("mutated",mypeers);
             if(deadpeer.rendered){
-                document.getElementById(id).remove();
+                document.getElementById(deadpeer.peer).remove();
             }
         });
         socket.on('connect', () => {
@@ -46,6 +61,10 @@ class App extends Component {
             console.log("redirect","?roomid="+val.url);
             window.top.location.href= val.url;
             // window.location.href = "?roomid="+val.url;
+          });
+
+          socket.on("toggled",(val)=>{
+            
           })
           
           socket.on('userstat',(val)=>{
@@ -53,8 +72,8 @@ class App extends Component {
               console.log(room);
               const peer = new Peer.peerjs.Peer({
                   path: "/peer",
-                  host:"pure-thicket-48071.herokuapp.com",
-                  port:443,
+                  host:"localhost",
+                  port:3300,
                   config: {
                       'iceServers': [{
                           url: 'stun:stun.l.google.com:19302'
@@ -67,9 +86,10 @@ class App extends Component {
                   mypeers.push(c);
                   console.log(c);
                   console.log("pushed");
-                  c.on('data', function (data) {
-                      console.log("hit");
-                      console.log(data);
+                  c.on('data', function (peerid) {
+                    console.log("communicated",peerid);
+                    let selectpeer=mypeers.find((x)=>x.peer==peerid);
+                    selectpeer.toggled=true;
                   });
 
                   console.log("gonnna call ==============")
@@ -80,33 +100,60 @@ class App extends Component {
                   peer.ids = id;
                   myid = id;
                   // sel(".head").innerHTML = id;
+                  console.log("meraa id");
                   console.log(id)
                   socket.emit("signal", {
                       room,
                       id
                   });
               });
+              peer.on('data', function (peerid) {
+                console.log("communicated",peerid);
+                let selectpeer=mypeers.find((x)=>x.peer==peerid);
+                selectpeer.toggled=true;
+              });
 
-              function callPeer(id) {
-                  console.log(id + "call");
+              var checkCam = (val) => {
+                console.log("cam or sc",val);
+                if(val.includes("screen"))
+                   return "screen"
+                 return "cam"   
+              }
+              callPeer = (id) => {
+                  console.log(id + "call",mainstream,this.state.screenShare);
                   var call;
-                  navigator.mediaDevices.getUserMedia({
+                  if(!mainstream){
+                    navigator.mediaDevices[this.state.screenShare]({
                       audio: true,
                       video:true
                   }).then((stream) => {
-                      call = peer.call(id, stream);
+                      mainstream=stream;
+                      if(this.state.screenShare=="getDisplayMedia"){
+                      mainstream.getVideoTracks()[0].contentHint="screen";
+                      }
+                      console.log("090",mainstream)
+                      console.log(":::",mainstream)
+                      call = peer.call(id, mainstream);
                       call.on('stream', (stream) => {
                           console.log("========")
                           console.log(mypeers);
-                          console.log(id);
+                          console.log(id,stream.getVideoTracks()[0]);
                           console.log("========")
                           let selectpeer=mypeers.find(x=>x.peer==id);
                           if("rendered" in selectpeer){
+                            
+                            if(!("toggled" in  selectpeer)){
                               return;
+                            }
                           }
                           selectpeer.rendered=true;
                           console.log("received stream answered");
-                          var video = document.createElement("video");
+                          if(selectpeer.toggled){
+                            var video = document.getElementById(selectpeer.peer)
+                          }else{
+                            var video = document.createElement("video");
+
+                          }
                           video.id=id;
                           video.srcObject = stream;
                           let di = document.createElement("div");
@@ -119,25 +166,66 @@ class App extends Component {
                   }).catch((e)=>{
                     console.log(e);
                   })
+                  }else{
+                      call = peer.call(id, mainstream);
+                      call.on('stream', (stream) => {
+                          console.log("========")
+                          console.log(mypeers);
+                          console.log(id,stream);
+                          console.log("========")
+                          let selectpeer=mypeers.find(x=>x.peer==id);
+                          if("rendered" in selectpeer){
+                            
+                            if(!("toggled" in  selectpeer)){
+                              return;
+                            }
+                          }
+                          selectpeer.rendered=true;
+                          console.log("received stream answered");
+                          if(selectpeer.toggled){
+                            var video = document.getElementById(selectpeer.peer)
+                          }else{
+                            var video = document.createElement("video");
+
+                          }
+                          var video = document.createElement("video");
+                          video.id=id;
+                          video.srcObject = stream;
+                          let di = document.createElement("div");
+                          di.classList.add("cover");
+                          di.appendChild(video);
+                          sel("#wrapper").appendChild(di);
+                          video.play();
+                      });
+                  }
+               
               }
-              peer.on('call', function (call) {
+              peer.on('call', (call) => {
                   console.log("&&&&&&&&&&&&&&");
-                  navigator.mediaDevices.getUserMedia({
+                  if(!mainstream){
+                    navigator.mediaDevices[this.state.screenShare]({
                       audio: true,
                       video:true
                   }).then((stream) => {
-                      call.answer(stream);
-                      call.on('stream', function (stream) {
+                    mainstream=stream;
+                      call.answer(mainstream);
+                      call.on('stream',(stream) => {
                           let selectpeer=mypeers.find(x=>x.peer==call.peer);
+                          console.log("(*(*(*(");
+                          console.log(stream);
                           if("rendered" in selectpeer){
+                            
+                            if(!("toggled" in  selectpeer)){
                               return;
+                            }
                           }
                           selectpeer.rendered=true;
-                          console.log("+++++++++++++++++++=");
-                          console.log(stream,call);
-                          console.log("received stream");
-                          var video = document.createElement(
-                              "video");
+                          if(selectpeer.toggled){
+                            var video = document.getElementById(selectpeer.peer)
+                          }else{
+                            var video = document.createElement("video");
+
+                          }
                               video.id=call.peer;
                           video.srcObject = stream;
                           console.log("appended");
@@ -154,6 +242,39 @@ class App extends Component {
                   }).catch((e)=>{
                     console.log(e);
                   })
+                  }else{
+                       call.answer(mainstream);
+                      call.on('stream',(stream) => {
+                          let selectpeer=mypeers.find(x=>x.peer==call.peer);
+                          if("rendered" in selectpeer){
+                            
+                            if(!("toggled" in  selectpeer)){
+                              return;
+                            }
+                          }
+                          selectpeer.rendered=true;
+                          if(selectpeer.toggled){
+                            var video = document.getElementById(selectpeer.peer)
+                          }else{
+                            var video = document.createElement("video");
+
+                          }
+                              video.id=call.peer;
+                          video.srcObject = stream;
+                          console.log("appended");
+                          let di = document.createElement("div");
+                          di.classList.add("cover");
+                          di.appendChild(video);
+                          sel("#wrapper").appendChild(di);
+                          video.play();
+                      });
+                      call.on('close',()=>{
+                          console.log("************");
+                          console.log(arguments);
+                      });
+
+                  }
+                  
               });
               peer.on('data', function (data) {
                   console.log("hittedma"+data);
@@ -175,8 +296,10 @@ class App extends Component {
                       console.log(conn);
                       mypeers.push(conn);
                       console.log("pushed to no of peers");
-                      conn.on('data', function (data) {
-                          console.log("hittedma"+data);
+                      conn.on('data', function (peerid) {
+                        console.log("communicated",peerid);
+                        let selectpeer=mypeers.find((x)=>x.peer==peerid);
+                        selectpeer.toggled=true;
                       });
                       console.log("destory set")
 
@@ -228,11 +351,46 @@ class App extends Component {
     let myParam1 = urlParams1.get('roomid');
     socket.emit("joinroom",myParam1);
   }
+  toggleShareScreen = () => {
+    console.log("toggle in")
+    if(document.getElementById("screen").checked){
+      if(mainstream){
+        mainstream.getTracks().forEach(x => {
+          x.stop();
+        });
+      }
+      console.log("checked disp",mainstream,this.state) 
+      mainstream=false;
+      mypeers.forEach((x)=>x.send(myid));
+      console.log(mypeers);
+      console.log("message sent")
+      this.setState({screenShare: "getDisplayMedia"});
+      // mypeers.forEach(x => {
+      //   callPeer(x.peer);
+      // })
+    } else {
+      console.log("checked user",mainstream,this.state)
+      if(mainstream){
+        mainstream.getTracks().forEach(x => {
+          x.stop();
+        });
+      }
+      mainstream=false;
+      this.setState({screenShare: "getUserMedia"});
+      // mypeers.forEach(x => {
+      //   callPeer(x.peer);
+      // })
+    }
+  }
   renderRegister = () => {
     return(
       <div style={styles.main}>
         <h2 className="bold" style={{fontSize:"2em"}}>Findr</h2>
-        <input className="form-control" type="text" placeholder={this.state.placeholder} style={{margin:"20px"}} onChange={(e) => this.setState({whcode: e.target.value})} value={this.state.whcode} />
+        <input className="form-control" type="text" placeholder={this.state.placeholder} style={{margin:"20px"}} onChange={(e) => this.setState({whcode: e.target.value})} value={this.state.whcode} /><br/>
+        <div>
+                <label htmlFor="screen">Share Screen</label>
+                <input style={{marginLeft:"10px"}} onClick={this.toggleShareScreen} type="checkbox" id="screen" name="vehicle1" />
+        </div>
         <div style={styles.sub}>
           <button className="btn btn-default bold custom" onClick={this.handleCreate}> Create </button>
           <button className="btn btn-default bold custom" onClick={this.handleJoin}> Join </button>
@@ -261,6 +419,12 @@ class App extends Component {
 
   }
   render(){
+    if(!mainstream && mypeers.length != 0){
+      console.log("toggle",this.state)
+      mypeers.forEach(x => {
+        callPeer(x.peer);
+      })
+    }
 
     return (
       <div > 

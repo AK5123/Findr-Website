@@ -20,9 +20,10 @@ class App extends Component {
   }
 
   componentDidMount(){
+        console.log("Version_updated");
         var room;
         mainstream=false;
-        socket = io.connect("http://localhost:3300/");
+        socket = io.connect("https://pure-thicket-48071.herokuapp.com/");
         let urlParams1 = new URLSearchParams(window.location.search);
         let myParam1 = urlParams1.get('roomid');
         socket.on("left",(id)=>{
@@ -39,7 +40,7 @@ class App extends Component {
 
             mypeers = mypeers.filter(x => x.peer!=id)
             console.log("mutated",mypeers);
-            if(deadpeer.rendered){
+            if(deadpeer && deadpeer.rendered){
                 document.getElementById(deadpeer.peer).remove();
             }
         });
@@ -72,8 +73,8 @@ class App extends Component {
               console.log(room);
               const peer = new Peer.peerjs.Peer({
                   path: "/peer",
-                  host:"localhost",
-                  port:3300,
+                  host:"pure-thicket-48071.herokuapp.com",
+                  port:443,
                   config: {
                       'iceServers': [{
                           url: 'stun:stun.l.google.com:19302'
@@ -140,27 +141,28 @@ class App extends Component {
                           console.log(id,stream.getVideoTracks()[0]);
                           console.log("========")
                           let selectpeer=mypeers.find(x=>x.peer==id);
-                          if("rendered" in selectpeer){
+                          if(selectpeer && ("rendered" in selectpeer)){
                             
                             if(!("toggled" in  selectpeer)){
                               return;
                             }
                           }
-                          selectpeer.rendered=true;
-                          console.log("received stream answered");
-                          if(selectpeer.toggled){
-                            var video = document.getElementById(selectpeer.peer)
-                          }else{
-                            var video = document.createElement("video");
-
+                          if(selectpeer){
+                            selectpeer.rendered=true;
+                            console.log("received stream answered");
+                            if(selectpeer.toggled){
+                              var video = document.getElementById(selectpeer.peer)
+                            }else{
+                              var video = document.createElement("video");
+                            }
+                            video.id=id;
+                            video.srcObject = stream;
+                            let di = document.createElement("div");
+                            di.classList.add("cover");
+                            di.appendChild(video);
+                            sel("#wrapper").appendChild(di);
+                            video.play();
                           }
-                          video.id=id;
-                          video.srcObject = stream;
-                          let di = document.createElement("div");
-                          di.classList.add("cover");
-                          di.appendChild(video);
-                          sel("#wrapper").appendChild(di);
-                          video.play();
                       });
 
                   }).catch((e)=>{
@@ -174,28 +176,30 @@ class App extends Component {
                           console.log(id,stream);
                           console.log("========")
                           let selectpeer=mypeers.find(x=>x.peer==id);
-                          if("rendered" in selectpeer){
+                          if(selectpeer && ("rendered" in selectpeer)){
                             
                             if(!("toggled" in  selectpeer)){
                               return;
                             }
                           }
-                          selectpeer.rendered=true;
-                          console.log("received stream answered");
-                          if(selectpeer.toggled){
-                            var video = document.getElementById(selectpeer.peer)
-                          }else{
+                          if(selectpeer){
+                            selectpeer.rendered=true;
+                            console.log("received stream answered");
+                            if(selectpeer.toggled){
+                              var video = document.getElementById(selectpeer.peer)
+                            }else{
+                              var video = document.createElement("video");
+  
+                            }
                             var video = document.createElement("video");
-
+                            video.id=id;
+                            video.srcObject = stream;
+                            let di = document.createElement("div");
+                            di.classList.add("cover");
+                            di.appendChild(video);
+                            sel("#wrapper").appendChild(di);
+                            video.play();
                           }
-                          var video = document.createElement("video");
-                          video.id=id;
-                          video.srcObject = stream;
-                          let di = document.createElement("div");
-                          di.classList.add("cover");
-                          di.appendChild(video);
-                          sel("#wrapper").appendChild(di);
-                          video.play();
                       });
                   }
                
@@ -213,27 +217,30 @@ class App extends Component {
                           let selectpeer=mypeers.find(x=>x.peer==call.peer);
                           console.log("(*(*(*(");
                           console.log(stream);
-                          if("rendered" in selectpeer){
+                          if(selectpeer && ("rendered" in selectpeer)){
                             
                             if(!("toggled" in  selectpeer)){
                               return;
                             }
                           }
-                          selectpeer.rendered=true;
-                          if(selectpeer.toggled){
-                            var video = document.getElementById(selectpeer.peer)
-                          }else{
-                            var video = document.createElement("video");
-
+                          if(selectpeer){
+                            selectpeer.rendered=true;
+                            if(selectpeer.toggled){
+                              var video = document.getElementById(selectpeer.peer)
+                            }else{
+                              var video = document.createElement("video");
+  
+                            }
+                                video.id=call.peer;
+                            video.srcObject = stream;
+                            console.log("appended");
+                            let di = document.createElement("div");
+                            di.classList.add("cover");
+                            di.appendChild(video);
+                            sel("#wrapper").appendChild(di);
+                            video.play();
                           }
-                              video.id=call.peer;
-                          video.srcObject = stream;
-                          console.log("appended");
-                          let di = document.createElement("div");
-                          di.classList.add("cover");
-                          di.appendChild(video);
-                          sel("#wrapper").appendChild(di);
-                          video.play();
+
                       });
                       call.on('close',()=>{
                           console.log("************");
@@ -246,27 +253,29 @@ class App extends Component {
                        call.answer(mainstream);
                       call.on('stream',(stream) => {
                           let selectpeer=mypeers.find(x=>x.peer==call.peer);
-                          if("rendered" in selectpeer){
+                          if(selectpeer && ("rendered" in selectpeer)){
                             
                             if(!("toggled" in  selectpeer)){
                               return;
                             }
                           }
-                          selectpeer.rendered=true;
-                          if(selectpeer.toggled){
-                            var video = document.getElementById(selectpeer.peer)
-                          }else{
-                            var video = document.createElement("video");
-
+                          if(selectpeer){
+                            selectpeer.rendered=true;
+                            if(selectpeer.toggled){
+                              var video = document.getElementById(selectpeer.peer)
+                            }else{
+                              var video = document.createElement("video");
+  
+                            }
+                                video.id=call.peer;
+                            video.srcObject = stream;
+                            console.log("appended");
+                            let di = document.createElement("div");
+                            di.classList.add("cover");
+                            di.appendChild(video);
+                            sel("#wrapper").appendChild(di);
+                            video.play();
                           }
-                              video.id=call.peer;
-                          video.srcObject = stream;
-                          console.log("appended");
-                          let di = document.createElement("div");
-                          di.classList.add("cover");
-                          di.appendChild(video);
-                          sel("#wrapper").appendChild(di);
-                          video.play();
                       });
                       call.on('close',()=>{
                           console.log("************");
